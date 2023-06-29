@@ -24,6 +24,9 @@ def file_already_exist(script_dir, filename):
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 
+# Define the wait time in seconds
+wait_time = 1200  # 10 minutes
+
 
 downloader = IDMan()
 destination_path = r"" # The folder path you want your downloading video to be saved
@@ -31,7 +34,7 @@ destination_path = r"" # The folder path you want your downloading video to be s
 ydl_opts = {
     'limit_rate' : '128M',
     'proxy': 'socks5://127.0.0.1:10808',
-    'verbose': True,
+    'verbose': False,
     'outtmpl': '%(title)s-%(id)s.%(ext)s',
     'format':'best',
 }
@@ -58,15 +61,33 @@ with open('list.txt', 'r') as input_file:
             try:
                 downloader.download(download_url,path_to_save = destination_path, output=filename, referrer= url, cookie=None, postData=None, user=None, password=None, confirm = False, lflag = None, clip=False)
 
-                while True:
-                    if os.path.exists(filename):
-                        print(f'{filename} download complete!')
-                        break
-                    else:
-                        print(f'{filename} not found. Waiting 20 seconds...')
-                        time.sleep(20)
-            
+                start_time = time.time()
+                downloaded = False
+                total_seconds = 0 
 
+                while not downloaded and (time.time() - start_time) < wait_time:
+                    minutes_old = total_seconds // 60  # Integer division to get the number of minutes
+                    minutes = (total_seconds+1) // 60  # Integer division to get the number of minutes
+                    seconds_old = total_seconds % 60  # Modulo operator to get the number of remaining seconds
+                    seconds = (total_seconds+1) % 60  # Modulo operator to get the number of remaining seconds
+                    output_string = f'{filename} not found. {minutes} Minutes and {seconds} Seconds...'
+                    if os.path.exists(filename):
+                        # prevent \r to override last output
+                        print(output_string)
+                        downloaded = True
+                    else:
+                        print(output_string, end="\r")
+
+                    time.sleep(1)
+                    total_seconds = total_seconds + 1
+
+            
+                if not downloaded:
+                    print(f'Timeout exceeded for {filename}, moving on to the next URL...')
+                    continue
+
+                # Video downloaded successfully
+                print(f'{filename} downloaded successfully!')
 
             except KeyboardInterrupt:
                 print("Script interrupted by user.")
@@ -79,4 +100,3 @@ with open('list.txt', 'r') as input_file:
 
 # Close the input file
 input_file.close()
-
